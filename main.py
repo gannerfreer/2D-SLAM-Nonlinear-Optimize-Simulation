@@ -49,10 +49,10 @@ while n != sum:
         # 整个框架就是为了维护这个slidewindow_graph结构
         slidewindow_graph.Initialize(estimate_init_pose, measure)
     else:
-        t1 = time.clock()
+        t1 = time.perf_counter()
         slidewindow_graph.Update(measure) 
-        t2 = time.clock()
-        #print(t2-t1)
+        t2 = time.perf_counter()
+        print("optimize cost:",t2-t1)
     draw.Show_result(r)
     
     move_model.Updatepose()
