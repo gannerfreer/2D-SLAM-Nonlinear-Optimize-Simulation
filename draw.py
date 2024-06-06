@@ -49,14 +49,26 @@ class Draw:
         plt.axis([-1, 21, -1, 21])
         ax = plt.gca()
         ax.set_aspect(1)
+        # 预测轨迹: self._graph._esti_pose[0] --> x序列, self._graph._esti_pose[1] --> y序列
         plt.plot(self._graph._esti_pose[0], self._graph._esti_pose[1], color= 'b')
-        plt.plot(self._circlex,self._circley, color='b')
-        plt.plot(self._x, self._y, color='b', marker='+')
+        # 传感器范围
+        plt.plot(self._circlex,self._circley, color='b', linestyle='--')
+        # 真实位置
+        plt.plot(self._x, self._y, color='b', marker='+',linewidth=2)
+        # 真实路标位置
         plt.scatter(self._landmarks._landmarks[0], self._landmarks._landmarks[1], color='r', marker='*')
+        # 轨迹真值
         plt.plot((self._traj)[0], (self._traj)[1], color='r')
+        # 滑动窗口位姿
         plt.scatter(self._graph._slideframes[0], self._graph._slideframes[1], color='r', marker='s')
+        # 滑窗内路标
         plt.scatter(self._graph._slidepoints[0], self._graph._slidepoints[1], color='b', marker='*')
+        # 啥蓝色方块?
         plt.scatter(self._graph._f2ftrack_show[0], self._graph._f2ftrack_show[1],color='b',marker='s')
         plt.pause(0.01)
 
+    def Save_result(self):
+        plt.savefig('result.png')
+        plt.show()
+        plt.close()
 

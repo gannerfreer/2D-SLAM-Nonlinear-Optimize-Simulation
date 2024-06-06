@@ -9,22 +9,15 @@
      #   #         #         #    #         # #         #
 ######   #######  #           #  #           #           #
 ##---------------------------------------------------------------
-import numpy as np
-from numpy import linspace
-import matplotlib.pyplot as plt
 import time
-import sys
-import os
+import numpy as np
 
 # 我的类
 from movemodel import MoveModel
 from draw import Draw
 from landmark import Landmark
 from measure import Measure
-from frame import Frame
-from mappoint import Mappoint
 from slidewindow_graph import Slidewindow_graph
-from five_point_tracking import Gauss_newton
 
 init_pose = np.array([[12.0], [3.0], [0.0]])
 estimate_init_pose = np.array([[12.0], [3.0], [0.0]])
@@ -57,4 +50,6 @@ while n != sum:
     
     move_model.Updatepose()
     n = n + 1
+
+# draw.Save_result()
 ##############################################################

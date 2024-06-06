@@ -8,8 +8,10 @@ class Mappoint:
         self._descriptor = 0
         self._pose = np.array([[0], [0]])
         self._seeFrames = []
+
     def set_pose(self, pose):
         self._pose = pose
+        
     def set_descriptor(self, descriptor):
         self._descriptor = descriptor
     

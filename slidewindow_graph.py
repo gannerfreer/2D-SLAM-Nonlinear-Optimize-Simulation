@@ -7,16 +7,14 @@ import numpy as np
 np.set_printoptions(threshold=np.inf)
 
 from math import sin, cos
-import math
-from scipy import optimize
 from measure import Measure
 from frame import Frame
 from mappoint import Mappoint
 from five_point_tracking import Gauss_newton
-from movemodel import MoveModel
+
 class Slidewindow_graph:
     def __init__(self):
-        self._max_window = 20
+        self._max_window = 5
         # 滑动窗口中的frame集合
         self._frames_DB = []
         # 滑动窗口中mappoint集合，里面元素为字典(描述子->Mappoints类)
@@ -39,6 +37,7 @@ class Slidewindow_graph:
         self._f2ftrack_show = [[],[]]
         self._slideframes = [[], []]
         self._slidepoints = [[],[]]
+
     def Initialize(self, init_pose, measure):
         self._measure = measure
         newFrame = Frame(self._measure._pose_id)
@@ -80,6 +79,7 @@ class Slidewindow_graph:
         i = 0
         self._coefficient = [[],[]]
 
+        # 只能支持5个点的跟踪
         while n != 5:
             if self._measure._data[2][i] in self._lastframe._seeDescriptor:
                 self._coefficient[1].append((self._mappoints_DB[self._measure._data[2][i]])._pose[0][0])
@@ -90,13 +90,14 @@ class Slidewindow_graph:
                 self._f2ftrack.append(self._measure._data[2][i])
             i = i + 1
 
-        init_gs0 = np.array([[self._lastframe._pose[0][0]], [self._lastframe._pose[1][0]], [cos(self._lastframe._pose[2][0])], [sin(self._lastframe._pose[2][0])]])
         init_gs = np.array([[self._lastframe._pose[0][0]],[self._lastframe._pose[1][0]],[self._lastframe._pose[2][0]]])
+
         # 高斯牛顿法求解
-        GNsolve0 = Gauss_newton(self._coefficient, init_gs0)
         GNsolve = Gauss_newton(self._coefficient, init_gs)
-        
+
         x = GNsolve.Solve()
+
+
         newFrame.set_pose(x)
         # 根据当前帧的位置，来估计新增加mappoint的初始位置；老的mappoints位置不变
         for i in range(0, len(self._measure._data[0])):
@@ -186,32 +187,6 @@ class Slidewindow_graph:
         #f = open("./a.txt", 'w+')
         #print(self._jacobi)
         #print >> f, self._jacobi
-
-    def Get_prior(self):
-        dim = len(self._state)
-        dim1 = 2 * len(self._frames_DB[0]._new_mappoint_state) + 3
-        # debug
-        # if len(self._frames_DB[0]._new_mappoint_state) == len(self._frames_DB[0]._seeDescriptor):
-        #     print('ok')
-        dim2 = dim - dim1
-        measure_dim = 2 * len(self._frames_DB[0]._new_mappoint_state)
-        J_old = self._jacobi[0:measure_dim, 0:dim]
-        error_old = self._error[0:measure_dim, 0:1]
-        if len(self._prior_matrix) > 0:
-            H = np.dot(J_old.T, J_old) + 0.01 * np.identity(dim) + self._prior_matrix
-            b = -np.dot(J_old.T, error_old) + self._prior_matrixb
-        else:
-            H = np.dot(J_old.T, J_old) + 0.01 * np.identity(dim) 
-            b = -np.dot(J_old.T, error_old)           
-        H21 = H[dim1:dim, 0:dim1]
-        # f = open("./a.txt", 'w+')
-        # print >> f, H21
-        H11 = H[0:dim1, 0:dim1] 
-        H12 = H[0:dim1, dim1:dim]
-        H22 = H[dim1:dim, dim1:dim]
-        b_old = b[0:dim1, 0]
-        self._prior_matrix = H22 - np.dot(np.dot(H21, np.linalg.inv(H11)), H12)
-        self._prior_matrixb = b[dim1:dim, 0] - np.dot(np.dot(H21, np.linalg.inv(H11)), b_old)
             
     def Linearization(self):
         self.Assemble_state()
@@ -264,6 +239,51 @@ class Slidewindow_graph:
             sum = sum + 1
         #print(len(self._state))
         #exit()
+
+    def Flush_graph(self):
+        for i in range(0, len(self._frames_DB)):
+            # 装配位姿向量(3*1)
+            index = self._frameid2state[ self._frames_DB[i]._id]
+
+            d = np.array([[0.0], [0.0], [0.0]])
+            #print(index)
+            d[0][0] = self._state[index, 0]
+            d[1][0] = self._state[index+1, 0]
+            d[2][0] = self._state[index+2, 0]
+            #print(d)
+            #print(self._state)
+            #exit()
+            self._frames_DB[i].set_pose(d)
+            # 装配地图点向量(2*1)
+            for j in range(0, len(self._frames_DB[i]._seeMappints)):
+                temp_index = self._descriptor2state[self._frames_DB[i]._seeMappints[j]._descriptor] 
+                self._frames_DB[i]._seeMappints[j]._pose[0:2, 0] = self._state[temp_index:(temp_index + 2), 0]
+
+    def Get_prior(self):
+        dim = len(self._state)
+        dim1 = 2 * len(self._frames_DB[0]._new_mappoint_state) + 3
+        # debug
+        # if len(self._frames_DB[0]._new_mappoint_state) == len(self._frames_DB[0]._seeDescriptor):
+        #     print('ok')
+        dim2 = dim - dim1
+        measure_dim = 2 * len(self._frames_DB[0]._new_mappoint_state)
+        J_old = self._jacobi[0:measure_dim, 0:dim]
+        error_old = self._error[0:measure_dim, 0:1]
+        if len(self._prior_matrix) > 0:
+            H = np.dot(J_old.T, J_old) + 0.01 * np.identity(dim) + self._prior_matrix
+            b = -np.dot(J_old.T, error_old) + self._prior_matrixb
+        else:
+            H = np.dot(J_old.T, J_old) + 0.01 * np.identity(dim) 
+            b = -np.dot(J_old.T, error_old)           
+        H21 = H[dim1:dim, 0:dim1]
+        # f = open("./a.txt", 'w+')
+        # print >> f, H21
+        H11 = H[0:dim1, 0:dim1] 
+        H12 = H[0:dim1, dim1:dim]
+        H22 = H[dim1:dim, dim1:dim]
+        b_old = b[0:dim1, 0]
+        self._prior_matrix = H22 - np.dot(np.dot(H21, np.linalg.inv(H11)), H12)
+        self._prior_matrixb = b[dim1:dim, 0] - np.dot(np.dot(H21, np.linalg.inv(H11)), b_old)
 
     def Cut_window(self):
         #print('cut_window!')
@@ -327,23 +347,4 @@ class Slidewindow_graph:
                 self._f2ftrack_show[1].append(self._mappoints_DB[self._f2ftrack[k]]._pose[1][0])
 
 
-    def Flush_graph(self):
-
-        for i in range(0, len(self._frames_DB)):
-            # 装配位姿向量(3*1)
-            index = self._frameid2state[ self._frames_DB[i]._id]
-
-            d = np.array([[0.0], [0.0], [0.0]])
-            #print(index)
-            d[0][0] = self._state[index, 0]
-            d[1][0] = self._state[index+1, 0]
-            d[2][0] = self._state[index+2, 0]
-            #print(d)
-            #print(self._state)
-            #exit()
-            self._frames_DB[i].set_pose(d)
-            # 装配地图点向量(2*1)
-            for j in range(0, len(self._frames_DB[i]._seeMappints)):
-                temp_index = self._descriptor2state[self._frames_DB[i]._seeMappints[j]._descriptor] 
-                self._frames_DB[i]._seeMappints[j]._pose[0:2, 0] = self._state[temp_index:(temp_index + 2), 0]
             

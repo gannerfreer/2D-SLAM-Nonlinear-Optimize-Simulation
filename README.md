@@ -32,3 +32,8 @@
 滑窗之外的观测信息不直接舍去，利用舒尔补转换成约束矩阵，形成先验信息，在优化中使用。这里使用的边缘化方案，可以保证FEJ。
 
 ![picture2](https://github.com/liuzhenboo/2D-SLAM-By-Nonlinear-Optimization/raw/master/pictures/fej-marge.png)
+
+上述内容来自原作者的[2D-SLAM-By-Nonlinear-Optimization](https://github.com/liuzhenboo/2D-SLAM-By-Nonlinear-Optimization) 感谢原作者的分享。
+
+## 总结
+下面是我的总结，以及我新增的内容。
