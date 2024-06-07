@@ -1,5 +1,6 @@
 # coding:utf-8
 # create by liuzhenbo 2020/8/16 in nwpu
+# modified by gray 2024/6/7 in hnu
 ##-------------------------------------------------------------
 ######   #              #              #           #
 #        #             # #            # #         # #
@@ -30,15 +31,15 @@ draw = Draw(landmarks, slidewindow_graph, move_model)
 r = 3.0
 
 # 循环计数
-n = 0
-sum = 100
+step = 0
+end = 100
 # 主逻辑（*.*）     
 #########################################################
-while n != sum:
+while step != end:
     measure = Measure(move_model, landmarks, r)
-    measure.GetMeasure(n)
+    measure.GetMeasure(step)
 
-    if n == 0:
+    if step == 0:
         # 整个框架就是为了维护这个slidewindow_graph结构
         slidewindow_graph.Initialize(estimate_init_pose, measure)
     else:
@@ -49,7 +50,7 @@ while n != sum:
     draw.Show_result(r)
     
     move_model.Updatepose()
-    n = n + 1
+    step = step + 1
 
 # draw.Save_result()
 ##############################################################

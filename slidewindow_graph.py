@@ -97,7 +97,6 @@ class Slidewindow_graph:
 
         x = GNsolve.Solve()
 
-
         newFrame.set_pose(x)
         # 根据当前帧的位置，来估计新增加mappoint的初始位置；老的mappoints位置不变
         for i in range(0, len(self._measure._data[0])):
@@ -126,6 +125,7 @@ class Slidewindow_graph:
         self._descriptor2state = {}
         self._frameid2state = {}
         self._measure_count = 0
+        # 状态向量 = frame(x,y,theta) + mappoint(x,y)
         dim = 3*len(self._frames_DB) + 2*len(self._mappoints_DB)
         self._state.resize(dim, 1)
         
@@ -133,7 +133,6 @@ class Slidewindow_graph:
         for i in range(0, len(self._frames_DB)):
             # 装配位姿向量(3*1)
             self._state[index:(index + 3), 0] = self._frames_DB[i]._pose[0:3, 0]
-            #print(self._frames_DB[i]._pose[0:3, 0])
             self._frameid2state[self._frames_DB[i]._id] = index
             index = index + 3
             self._measure_count = self._measure_count + len(self._frames_DB[i]._seeMappints)
@@ -144,6 +143,8 @@ class Slidewindow_graph:
                     self._state[index:(index + 2), 0] = self._frames_DB[i]._new_mappoint_state[j]._pose[0:2, 0]
                     self._descriptor2state[self._frames_DB[i]._new_mappoint_state[j]._descriptor] = index
                     index = index + 2
+        # 打印状态向量尺寸
+        print(self._state.shape);
 
 #        print(self._state)
     def Assemble_jacobi(self):
@@ -157,22 +158,21 @@ class Slidewindow_graph:
             for j in range(0, len(self._frames_DB[i]._seeMappints)):
                 point_index = self._descriptor2state[self._frames_DB[i]._seeMappints[j]._descriptor]
                 frame_index = self._frameid2state[self._frames_DB[i]._id]
-                #print(frame_index)
                 x_f = self._state[frame_index][0]
                 y_f = self._state[frame_index + 1][0]
                 theta = self._state[frame_index + 2][0]
                 x_p = self._state[point_index][0]
                 y_p = self._state[point_index + 1][0]
-                #print(x_f)
                 measure = self._frames_DB[i]._measure[self._frames_DB[i]._seeMappints[j]._descriptor]
+                
                 # 单一残差项对frame的2*3雅克比矩阵
                 self._jacobi[measure_index][frame_index] = -cos(theta)
-                #print(-cos(theta))
                 self._jacobi[measure_index][frame_index+1] = -sin(theta)
                 self._jacobi[measure_index][frame_index+2] = (x_f-x_p)*sin(theta)+(y_p-y_f)*cos(theta)
-                self._jacobi[measure_index + 1][frame_index] = sin(theta)
+                self._jacobi[measure_index+1][frame_index] = sin(theta)
                 self._jacobi[measure_index+1][frame_index+1] = -cos(theta)
                 self._jacobi[measure_index+1][frame_index+2] = (x_f-x_p)*cos(theta)+(y_f-y_p)*sin(theta)
+                
                 # 单一残差项对mappoint的2*2雅克比矩阵
                 self._jacobi[measure_index][point_index] = cos(theta)
                 self._jacobi[measure_index][point_index+1] = sin(theta)
@@ -184,9 +184,9 @@ class Slidewindow_graph:
                 self._error[measure_index+1][0] = (x_f-x_p)*sin(theta)+(y_p-y_f)*cos(theta) - measure[1][0]
 
                 measure_index = measure_index + 2
-        #f = open("./a.txt", 'w+')
-        #print(self._jacobi)
-        #print >> f, self._jacobi
+
+        # 打印雅克比矩阵尺寸
+        print(self._jacobi.shape)
             
     def Linearization(self):
         self.Assemble_state()
@@ -231,7 +231,7 @@ class Slidewindow_graph:
             delta = np.linalg.solve(H, b)
             # print(delta)
             # exit()
-            # # 更新线性化点
+            # 更新线性化点
             self._state = delta + self._state
             # 更新雅克比
             self.Assemble_jacobi()
@@ -293,11 +293,6 @@ class Slidewindow_graph:
             del self._mappoints_DB[mappoint0._descriptor]
             self._measure_count = self._measure_count - len(mappoint0._seeFrames)
             for j in range(0, len(mappoint0._seeFrames)):
-                # print(len(mappoint0._seeFrames))
-                # print(self._measure_count - len(mappoint0._seeFrames))
-                # # print(len(mappoint0._seeFrames))
-                # print(mappoint0._seeFrames[0])
-                # print(j)
                 frame0 = mappoint0._seeFrames[j]
                 (frame0._seeMappints).remove(mappoint0)
                 (frame0._seeDescriptor).remove(mappoint0._descriptor)
@@ -310,7 +305,7 @@ class Slidewindow_graph:
         #t1 = time.clock()
         self.Linearization()
         #t2 = time.clock()
-        #print(t2 - t1)
+        #print(t2-t1)
 
         #t1 = time.clock()
         self.Iterative_optimize()

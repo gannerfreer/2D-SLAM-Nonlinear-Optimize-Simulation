@@ -17,7 +17,6 @@ class Gauss_newton:
         
     def Linear(self):
         self._error = 0.0
-        # 感觉H这么搞不太好
         self._H = np.zeros((3, 3), dtype=float)
         self._b = np.zeros((3, 1), dtype=float)
         p_x = self._current_state[0][0]
