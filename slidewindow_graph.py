@@ -14,7 +14,7 @@ from five_point_tracking import Gauss_newton
 
 class Slidewindow_graph:
     def __init__(self):
-        self._max_window = 5
+        self._max_window = 10
         # 滑动窗口中的frame集合
         self._frames_DB = []
         # 滑动窗口中mappoint集合，里面元素为字典(描述子->Mappoints类)
@@ -121,6 +121,7 @@ class Slidewindow_graph:
         self._lastframe = newFrame
        
     def Assemble_state(self):
+        # 最老帧在最前面
         self._state = np.array([])
         self._descriptor2state = {}
         self._frameid2state = {}
@@ -143,10 +144,10 @@ class Slidewindow_graph:
                     self._state[index:(index + 2), 0] = self._frames_DB[i]._new_mappoint_state[j]._pose[0:2, 0]
                     self._descriptor2state[self._frames_DB[i]._new_mappoint_state[j]._descriptor] = index
                     index = index + 2
+        print("measure: ",self._measure_count)
         # 打印状态向量尺寸
         print(self._state.shape);
 
-#        print(self._state)
     def Assemble_jacobi(self):
         self._jacobi = np.array([])
         self._error = np.array([])
@@ -165,6 +166,7 @@ class Slidewindow_graph:
                 y_p = self._state[point_index + 1][0]
                 measure = self._frames_DB[i]._measure[self._frames_DB[i]._seeMappints[j]._descriptor]
                 
+                # frame_index和point_index 已经在前面的state装配中确定，保证了帧位姿和特征的对齐
                 # 单一残差项对frame的2*3雅克比矩阵
                 self._jacobi[measure_index][frame_index] = -cos(theta)
                 self._jacobi[measure_index][frame_index+1] = -sin(theta)
@@ -199,7 +201,9 @@ class Slidewindow_graph:
         if len(self._prior_matrix) != 0:
             temp0 = np.zeros((len(self._state), len(self._state)))
             temp1 = np.zeros((len(self._state), 1))
+            # 减去 lastframe 中的约束，为什么这么减呢
             dim = len(self._state) - 2*len(self._lastframe._new_mappoint_state) - 3
+            print('Pre:',len(self._state),'  Now:',dim)
             temp0[0:dim, 0:dim] = self._prior_matrix
             # debug
             # if len(self._prior_matrix) + 2 * len(self._lastframe._new_mappoint_state) + 3 == len(self._state):
@@ -213,20 +217,18 @@ class Slidewindow_graph:
             temp1[0:dim, 0] = self._prior_matrixb
             self._prior_matrix = temp0
             self._prior_matrixb = temp1
-            #print(self._prior_matrix)
-            #print("维度对着呢")
+            # print(self._prior_matrix)
+            # print("维度对着呢")
         while np.dot(self._error.T, self._error)[0][0] > 0.01 and sum < 10:
-            #print(self._jacobi)
+            # print(self._jacobi)
             if len(self._prior_matrix) == 0:
-                #print("未使用先验！")
-
+                # print("未使用先验！")
                 H = np.dot(self._jacobi.T, self._jacobi) + 0.01 * np.identity(len(self._state))
                 b = -np.dot(self._jacobi.T, self._error)
             else:
+                # print("使用先验！")
                 H = np.dot(self._jacobi.T, self._jacobi) + 0.01 * np.identity(len(self._state)) + self._prior_matrix
-                
                 b = -np.dot(self._jacobi.T, self._error) + self._prior_matrixb
-                #print("使用先验！")
          
             delta = np.linalg.solve(H, b)
             # print(delta)
@@ -246,13 +248,13 @@ class Slidewindow_graph:
             index = self._frameid2state[ self._frames_DB[i]._id]
 
             d = np.array([[0.0], [0.0], [0.0]])
-            #print(index)
+            # print(index)
             d[0][0] = self._state[index, 0]
             d[1][0] = self._state[index+1, 0]
             d[2][0] = self._state[index+2, 0]
-            #print(d)
-            #print(self._state)
-            #exit()
+            # print(d)
+            # print(self._state)
+            # exit()
             self._frames_DB[i].set_pose(d)
             # 装配地图点向量(2*1)
             for j in range(0, len(self._frames_DB[i]._seeMappints)):
@@ -261,6 +263,7 @@ class Slidewindow_graph:
 
     def Get_prior(self):
         dim = len(self._state)
+        # 最老帧约束长度
         dim1 = 2 * len(self._frames_DB[0]._new_mappoint_state) + 3
         # debug
         # if len(self._frames_DB[0]._new_mappoint_state) == len(self._frames_DB[0]._seeDescriptor):
@@ -274,55 +277,63 @@ class Slidewindow_graph:
             b = -np.dot(J_old.T, error_old) + self._prior_matrixb
         else:
             H = np.dot(J_old.T, J_old) + 0.01 * np.identity(dim) 
-            b = -np.dot(J_old.T, error_old)           
-        H21 = H[dim1:dim, 0:dim1]
-        # f = open("./a.txt", 'w+')
-        # print >> f, H21
+            b = -np.dot(J_old.T, error_old)  
+        '''
+        H = |H11|H12|   b = |b_old|
+            |H21|H22|       |b[dim1:dim, 0]|
+        '''
         H11 = H[0:dim1, 0:dim1] 
+        H21 = H[dim1:dim, 0:dim1]
         H12 = H[0:dim1, dim1:dim]
         H22 = H[dim1:dim, dim1:dim]
         b_old = b[0:dim1, 0]
+        # f = open("./a.txt", 'w+')
+        # print >> f, H21
+
+        # 计算 schur complement [H_new = H22 - H21 * H11^(-1) * H12]
         self._prior_matrix = H22 - np.dot(np.dot(H21, np.linalg.inv(H11)), H12)
         self._prior_matrixb = b[dim1:dim, 0] - np.dot(np.dot(H21, np.linalg.inv(H11)), b_old)
 
     def Cut_window(self):
-        #print('cut_window!')
-
+        # print('cut_window!')
         for i in range(0, len(self._frames_DB[0]._seeMappints)):
+            # 遍历最老帧的所有看到的地图点
             mappoint0 = self._frames_DB[0]._seeMappints[0]
             del self._mappoints_DB[mappoint0._descriptor]
             self._measure_count = self._measure_count - len(mappoint0._seeFrames)
             for j in range(0, len(mappoint0._seeFrames)):
-                frame0 = mappoint0._seeFrames[j]
-                (frame0._seeMappints).remove(mappoint0)
-                (frame0._seeDescriptor).remove(mappoint0._descriptor)
-                del (frame0._measure)[mappoint0._descriptor]
-                #del mappoint0
+                # 遍历看到mappoint0的所有帧
+                frame_x = mappoint0._seeFrames[j]
+                # 对帧内删除mappoint0
+                (frame_x._seeMappints).remove(mappoint0)
+                (frame_x._seeDescriptor).remove(mappoint0._descriptor)
+                del (frame_x._measure)[mappoint0._descriptor]
+                # del mappoint0
         self._frames_DB.remove(self._frames_DB[0])
             
              
     def Optimize_graph(self):
-        #t1 = time.clock()
+        # t1 = time.clock()
         self.Linearization()
-        #t2 = time.clock()
-        #print(t2-t1)
+        # t2 = time.clock()
+        # print(t2-t1)
 
-        #t1 = time.clock()
+        # t1 = time.clock()
         self.Iterative_optimize()
-        #t2 = time.clock()
-        #print(t2-t1)
+        # t2 = time.clock()
+        # print(t2-t1)
 
-        #t1 = time.clock()
+        # t1 = time.clock()
         self.Flush_graph()
-        #t2 = time.clock()
-        #print(t2-t1)
+        # t2 = time.clock()
+        # print(t2-t1)
         
-        #t1 = time.clock()
+        # t1 = time.clock()
         if len(self._frames_DB) > self._max_window:
             self.Get_prior()
             self.Cut_window()
-        #t2 = time.clock()
-        #print(t2-t1)
+        # t2 = time.clock()
+        # print(t2-t1)
 
     def For_draw(self):
         self._esti_pose[0].append(self._lastframe._pose[0][0])
