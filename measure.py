@@ -24,15 +24,19 @@ class Measure:
         np.save('./measurement/data.npy',data_tosave)
 
     def DeserializeMeasure(self):
-        self._deserialized_data = np.load('./measurement/data.npy')
-        print(self._deserialized_data.shape)
-        return self._deserialized_data.shape[0]
+        if self._deserialized_data is None:
+            self._deserialized_data = np.load('./measurement/data.npy')
+            print(self._deserialized_data.shape)
+            return self._deserialized_data.shape[0]
 
     def GetMeasure(self, n):
+        self._data = [[],[],[]]
         # 更新pose id
         self._pose_id = n
         # 更新观测关系
         if self._deserialized_data is not None:
+            print("Using deserialized_data")
+            print("T:",self._movemodel_class._tb.T.ravel())
             for i in range(0,np.size(self._landmarks._landmarks,1)):
                 if (pow((self._movemodel_class._tb[0][0] - 1.0 * self._landmarks._landmarks[0][i]), 2.0) + pow((self._movemodel_class._tb[1][0] - 1.0 * self._landmarks._landmarks[1][i]), 2.0)) <= self._r * self._r and (pow((self._movemodel_class._tb[0][0] - 1.0 * self._landmarks._landmarks[0][i]), 2.0) + pow((self._movemodel_class._tb[1][0] - 1.0 * self._landmarks._landmarks[1][i]), 2.0)) >=0.01 :
                     temp = np.array([[self._deserialized_data[n][0][i]],[self._deserialized_data[n][1][i]]])
@@ -41,8 +45,9 @@ class Measure:
                     self._data[0].append(one_data[0][0])
                     self._data[1].append(one_data[1][0])
                     # 观测的landmark id作为描述子
-                    self._data[2].append(i)
+                    self._data[2].append(self._landmarks._landmarks[2][i])
         else:
+            print("Using Rendering_data")
             for i in range(0,np.size(self._landmarks._landmarks,1)):
                 if (pow((self._movemodel_class._tb[0][0] - 1.0 * self._landmarks._landmarks[0][i]), 2.0) + pow((self._movemodel_class._tb[1][0] - 1.0 * self._landmarks._landmarks[1][i]), 2.0)) <= self._r * self._r and (pow((self._movemodel_class._tb[0][0] - 1.0 * self._landmarks._landmarks[0][i]), 2.0) + pow((self._movemodel_class._tb[1][0] - 1.0 * self._landmarks._landmarks[1][i]), 2.0)) >=0.01 :
                     temp = np.array([[self._landmarks._landmarks[0][i]],[self._landmarks._landmarks[1][i]]])

@@ -30,6 +30,7 @@ draw = Draw(landmarks, slidewindow_graph, move_model)
 # 传感器半径
 r = 3.0
 
+# 创建measure对象
 measure = Measure(move_model, landmarks, r)
 # measure.SerializeMeasure(100)
 f = measure.DeserializeMeasure()
@@ -40,7 +41,6 @@ end = f
 # 主逻辑（*.*）     
 #########################################################
 while step != end:
-    measure = Measure(move_model, landmarks, r)
     measure.GetMeasure(step)
 
     if step == 0:
