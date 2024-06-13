@@ -167,6 +167,8 @@ class Slidewindow_graph:
         print("_descriptor2state:",self._descriptor2state)
         print("len: ",len(self._descriptor2state))
         for i in range(0, len(self._frames_DB)):
+            # 这里的seeMappints已经删掉了非当前帧最先看到的点
+            # 所以我的修改才会在这里出问题
             for j in range(0, len(self._frames_DB[i]._seeMappints)):
                 point_index = self._descriptor2state[self._frames_DB[i]._seeMappints[j]._descriptor]
                 frame_index = self._frameid2state[self._frames_DB[i]._id]
@@ -212,7 +214,7 @@ class Slidewindow_graph:
         if len(self._prior_matrix) != 0:
             temp0 = np.zeros((len(self._state), len(self._state)))
             temp1 = np.zeros((len(self._state), 1))
-            # 减去 lastframe 中的约束，为什么这么减呢
+            # 减去 lastframe 中的约束，需要配套优化状态量 -> [帧(x,y,theta)+他首次看到的点(x,y)]
             dim = len(self._state) - 2*len(self._lastframe._new_mappoint_state) - 3
             print('Pre:',len(self._state),'  Now:',dim)
             temp0[0:dim, 0:dim] = self._prior_matrix
