@@ -9,6 +9,7 @@ class Mappoint:
         self._pose = np.array([[0], [0]])
         self._seeFrames = []
 
+    # mappint 对应pose，因为mappint是在某个pose下观测到的
     def set_pose(self, pose):
         self._pose = pose
         

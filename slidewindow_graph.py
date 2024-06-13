@@ -14,7 +14,7 @@ from five_point_tracking import Gauss_newton
 
 class Slidewindow_graph:
     def __init__(self):
-        self._max_window = 10
+        self._max_window = 3
         # 滑动窗口中的frame集合
         self._frames_DB = []
         # 滑动窗口中mappoint集合，里面元素为字典(描述子->Mappoints类)
@@ -54,6 +54,7 @@ class Slidewindow_graph:
             newmappoint.set_pose(mp_pose)
             newmappoint.add_frame(newFrame)
 
+            # 为啥要分新旧
             newFrame.add_mappoint(newmappoint)
             newFrame.add_newmappoints(newmappoint)
             newFrame.add_measure(raw_measure, newmappoint._descriptor)
@@ -102,11 +103,13 @@ class Slidewindow_graph:
         for i in range(0, len(self._measure._data[0])):
             raw_measure = np.array([[self._measure._data[0][i]],[self._measure._data[1][i]]])
             if self._measure._data[2][i] in self._mappoints_DB:
+                # 对已观察到点直接添加观测
                 newFrame.add_mappoint(self._mappoints_DB[self._measure._data[2][i]])
                 newFrame.add_measure(raw_measure, self._measure._data[2][i])
                 self._mappoints_DB[self._measure._data[2][i]].add_frame(newFrame)
                 continue
             else:
+                # 对新观察到的点，创建新的mappoint对象
                 pose = np.dot(np.linalg.inv(newFrame._Rbm), raw_measure) + newFrame._tb  
                 newmappoint = Mappoint()
                 newmappoint.set_descriptor(self._measure._data[2][i])
@@ -139,6 +142,8 @@ class Slidewindow_graph:
             self._measure_count = self._measure_count + len(self._frames_DB[i]._seeMappints)
 
             # 装配地图点向量(2*1)
+            # !! 注意这里是每帧的新增点 !!
+            print("len of new measure",len(self._frames_DB[i]._new_mappoint_state))
             for j in range(0, len(self._frames_DB[i]._new_mappoint_state)):
                 if not self._frames_DB[i]._new_mappoint_state[j]._descriptor in self._descriptor2state:
                     self._state[index:(index + 2), 0] = self._frames_DB[i]._new_mappoint_state[j]._pose[0:2, 0]
@@ -155,6 +160,12 @@ class Slidewindow_graph:
         self._error.resize(2 * self._measure_count, 1)
 
         measure_index = 0
+
+        print("frames : ",len(self._frames_DB))
+        print("points : ",len(self._frames_DB[0]._seeMappints))
+        print("points : ",len(self._frames_DB[1]._seeMappints))
+        print("_descriptor2state:",self._descriptor2state)
+        print("len: ",len(self._descriptor2state))
         for i in range(0, len(self._frames_DB)):
             for j in range(0, len(self._frames_DB[i]._seeMappints)):
                 point_index = self._descriptor2state[self._frames_DB[i]._seeMappints[j]._descriptor]
@@ -296,6 +307,19 @@ class Slidewindow_graph:
 
     def Cut_window(self):
         # print('cut_window!')
+        print("pre del measure: ",self._measure_count)
+        print("see mappints",len(self._frames_DB[0]._seeMappints))
+        print("mappoint: [", end="")
+        for mappoint in self._frames_DB[0]._seeMappints:
+            print(mappoint._descriptor, end=", ")
+        print("]")       
+
+        # for mappoint in self._frames_DB[0]._seeMappints:
+        #     mappoint._seeFrames.remove(self._frames_DB[0])
+        #     self._measure_count = self._measure_count - 1
+        #     if len(mappoint._seeFrames) == 0:
+        #         print("del mappoint: ",mappoint._descriptor)
+        #         del self._mappoints_DB[mappoint._descriptor]
         for i in range(0, len(self._frames_DB[0]._seeMappints)):
             # 遍历最老帧的所有看到的地图点
             mappoint0 = self._frames_DB[0]._seeMappints[0]
@@ -310,6 +334,7 @@ class Slidewindow_graph:
                 del (frame_x._measure)[mappoint0._descriptor]
                 # del mappoint0
         self._frames_DB.remove(self._frames_DB[0])
+        print("after del measure: ",self._measure_count)
             
              
     def Optimize_graph(self):

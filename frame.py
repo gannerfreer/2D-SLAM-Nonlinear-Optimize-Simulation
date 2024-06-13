@@ -26,6 +26,7 @@ class Frame:
         self._seeMappints.append(point)
         self._seeDescriptor.add(point._descriptor)
 
+    # 添加measure -> np array 2x1
     def add_measure(self, measure, descriptor):
         self._measure[descriptor] = measure
 
