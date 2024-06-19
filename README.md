@@ -1,5 +1,32 @@
 # 2D-SLAM-By-Nonlinear-Optimization
 
+本仓库fork自[liuzhenboo/2D-SLAM-By-Nonlinear-Optimization]
+
+## 待完善内容
+- [x] 代码注释
+- [x] 数据一致性(测试数据序列化/反序列化)
+- [ ] 边缘化策略优化(当边缘化删除了帧所有关联特征点,造成约束浪费) --进行中
+- [ ] 位姿误差APE/RPE计算
+- [ ] 边缘化过程可视化
+- [ ] LM算法优化
+- [ ] 其他FEJ策略尝试
+
+## 总结
+
+使用FEJ获取先验的效果：
+
+<img src="./pictures/Figure_1.png" style="zoom:50%;" />
+
+不使用FEJ获取先验的效果：
+
+<img src="./pictures/Figure_2.png" style="zoom:50%;" />
+
+由于没有保存先验，所以在前面部分漂移会更快，符合理论
+
+
+
+
+下述内容来自原作者的[2D-SLAM-By-Nonlinear-Optimization](https://github.com/liuzhenboo/2D-SLAM-By-Nonlinear-Optimization) 感谢原作者的分享。
 ## Features
 
 非线性优化，LM迭代优化，滑动窗口，边缘化，FEJ
@@ -33,7 +60,3 @@
 
 ![picture2](https://github.com/liuzhenboo/2D-SLAM-By-Nonlinear-Optimization/raw/master/pictures/fej-marge.png)
 
-上述内容来自原作者的[2D-SLAM-By-Nonlinear-Optimization](https://github.com/liuzhenboo/2D-SLAM-By-Nonlinear-Optimization) 感谢原作者的分享。
-
-## 总结
-下面是我的总结，以及我新增的内容。

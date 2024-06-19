@@ -14,7 +14,7 @@ from five_point_tracking import Gauss_newton
 
 class Slidewindow_graph:
     def __init__(self):
-        self._max_window = 3
+        self._max_window = 8
         # 滑动窗口中的frame集合
         self._frames_DB = []
         # 滑动窗口中mappoint集合，里面元素为字典(描述子->Mappoints类)
@@ -357,7 +357,7 @@ class Slidewindow_graph:
         
         # t1 = time.clock()
         if len(self._frames_DB) > self._max_window:
-            self.Get_prior()
+            # self.Get_prior()
             self.Cut_window()
         # t2 = time.clock()
         # print(t2-t1)

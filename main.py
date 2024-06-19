@@ -51,7 +51,7 @@ while step != end:
         slidewindow_graph.Update(measure) 
         t2 = time.perf_counter()
         print("optimize cost:",t2-t1)
-    # draw.Show_result(r)
+    draw.Show_result(r)
     
     move_model.Updatepose()
     step = step + 1

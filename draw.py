@@ -63,7 +63,7 @@ class Draw:
         plt.scatter(self._graph._slideframes[0], self._graph._slideframes[1], color='r', marker='s')
         # 滑窗内路标
         plt.scatter(self._graph._slidepoints[0], self._graph._slidepoints[1], color='b', marker='*')
-        # 啥蓝色方块?
+        # 帧间共同约束点
         plt.scatter(self._graph._f2ftrack_show[0], self._graph._f2ftrack_show[1],color='b',marker='s')
         plt.pause(0.01)
 
